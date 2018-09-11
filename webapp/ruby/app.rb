@@ -36,11 +36,24 @@ class App < Sinatra::Base
   end
 
   get '/initialize' do
+    db.query("DROP TABLE IF EXISTS channel_msgcount")
+    db.query(%|
+      CREATE TABLE channel_msgcount (
+        channel_id int(20) PRIMARY KEY,
+        count int(20)
+      )
+    |)
+
     db.query("DELETE FROM user WHERE id > 1000")
     db.query("DELETE FROM image WHERE id > 1001")
     db.query("DELETE FROM channel WHERE id > 10")
     db.query("DELETE FROM message WHERE id > 10000")
     db.query("DELETE FROM haveread")
+
+    db.query(%|
+      INSERT INTO channel_msgcount
+        SELECT channel_id, count(*) FROM message GROUP BY channel_id
+    |)
     204
   end
 
@@ -176,7 +189,7 @@ class App < Sinatra::Base
       r = {}
       r['channel_id'] = channel_id
       r['unread'] = if row.nil?
-        statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?')
+        statement = db.prepare('SELECT count as cnt FROM channel_msgcount WHERE channel_id = ?')
         statement.execute(channel_id).first['cnt']
       else
         statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id')
@@ -231,8 +244,9 @@ class App < Sinatra::Base
     @messages.reverse!
 
     # indexed
-    statement = db.prepare('SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?')
-    cnt = statement.execute(@channel_id).first['cnt'].to_f
+    statement = db.prepare('SELECT count as cnt FROM channel_msgcount WHERE channel_id = ?')
+    row = statement.execute(@channel_id).first
+    cnt = (if row then row['cnt'] else 0 end).to_f
     statement.close
     @max_page = cnt == 0 ? 1 :(cnt / n).ceil
 
@@ -285,6 +299,11 @@ class App < Sinatra::Base
     statement.execute(name, description)
     channel_id = db.last_id
     statement.close
+
+    statement = db.prepare('INSERT INTO channel_msgcount VALUES (?, 0)')
+    statement.execute(channel_id)
+    statement.close
+
     redirect "/channel/#{channel_id}", 303
   end
 
@@ -367,6 +386,9 @@ class App < Sinatra::Base
   def db_add_message(channel_id, user_id, content)
     statement = db.prepare('INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())')
     messages = statement.execute(channel_id, user_id, content)
+    statement.close
+    statement = db.prepare('UPDATE channel_msgcount SET count = count + 1 where channel_id = ?')
+    messages = statement.execute(channel_id)
     statement.close
     messages
   end
