@@ -1,0 +1,40 @@
+#!/usr/bin/env ruby
+
+require "json"
+require 'bundler/inline'
+gemfile do
+  source 'https://rubygems.org'
+  gem 'slack-notifier'
+  gem 'dotenv'
+end
+require 'slack-notifier'
+require 'dotenv'
+Dotenv.load(__dir__+"/.env")
+
+slack = Slack::Notifier.new ENV["SLACK_WEBHOOK"], username: "Bench"
+
+BENCH="(cd ~/isubata/bench; bin/bench -remotes=127.0.0.1 -output %)"
+BENCHLOG_DIR=__dir__+"/../bench_results/"
+
+now=Time.now.strftime("%FT%T")
+result_file=BENCHLOG_DIR+now
+cmd=BENCH.sub("%", result_file)
+
+puts "Starting benchmark... #{cmd}"
+slack.ping "Starting benchmark #{result_file}"
+
+puts `#{cmd}`
+raise "Failed... " unless $?.exitstatus == 0
+
+result_file="/home/isucon/isucon7-practice/bin/../bench_results/2018-09-11T15:51:18"
+result = JSON.load(File.open(result_file))
+
+score = result["score"]
+message = result["message"]
+error = result["error"]
+
+msg = "[#{message}] Score:#{score}
+Errors:#{error.size}
+#{error[0, 5].map{|l|"> #{l}"}.join("\n")}"
+
+slack.ping attachments: [{text: msg, fallback: msg}]
