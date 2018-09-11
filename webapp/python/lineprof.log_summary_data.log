@@ -1,0 +1,9 @@
+                                          file_name              func_name  total_time  avg_time  min_time  max_time  call_count
+---------------------------------------------------  ---------------------  ----------  --------  --------  --------  ----------
+/home/isucon/isucon7-practice/webapp/python/main.py  fetch_unread              5.14942   1.02988    1.0202   1.03571           5
+/home/isucon/isucon7-practice/webapp/python/main.py  dbh                       0.03205   0.00534   0.00241   0.01371           6
+/home/isucon/isucon7-practice/webapp/python/main.py  get_message               0.02441   0.02441   0.02441   0.02441           1
+/home/isucon/isucon7-practice/webapp/python/main.py  get_channel_list_info     0.00138   0.00138   0.00138   0.00138           1
+/home/isucon/isucon7-practice/webapp/python/main.py  teardown                  0.00101   0.00014     7e-05   0.00024           7
+/home/isucon/isucon7-practice/webapp/python/main.py  db_get_user                0.0007    0.0007    0.0007    0.0007           1
+/home/isucon/isucon7-practice/webapp/python/main.py  <listcomp>                  5e-05     1e-05     1e-05     2e-05           5

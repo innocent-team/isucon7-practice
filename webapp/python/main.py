@@ -9,6 +9,7 @@ import random
 import string
 import tempfile
 import time
+from wsgi_lineprof.middleware import LineProfilerMiddleware
 
 
 static_folder = pathlib.Path(__file__).resolve().parent.parent / 'public'
@@ -23,8 +24,8 @@ if not os.path.exists(str(icons_folder)):
 config = {
     'db_host': os.environ.get('ISUBATA_DB_HOST', 'localhost'),
     'db_port': int(os.environ.get('ISUBATA_DB_PORT', '3306')),
-    'db_user': os.environ.get('ISUBATA_DB_USER', 'root'),
-    'db_password': os.environ.get('ISUBATA_DB_PASSWORD', ''),
+    'db_user': os.environ.get('ISUBATA_DB_USER', 'isucon'),
+    'db_password': os.environ.get('ISUBATA_DB_PASSWORD', 'isucon'),
 }
 
 
@@ -396,6 +397,11 @@ def get_icon(file_name):
         return flask.Response(row['data'], mimetype=mime)
     flask.abort(404)
 
+from wsgi_lineprof.middleware import LineProfilerMiddleware
+from wsgi_lineprof.filters import FilenameFilter, TotalTimeSorter
+from wsgiref.simple_server import make_server
+profile_app = LineProfilerMiddleware(app, filters=[FilenameFilter("main.py"), TotalTimeSorter()], stream=open('lineprof.log', 'w'))
 
 if __name__ == "__main__":
-    app.run(port=8080, debug=True, threaded=True)
+    server = make_server('0.0.0.0', 5000, profile_app)
+    server.serve_forever()

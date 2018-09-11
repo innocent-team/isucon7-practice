@@ -1,0 +1,137 @@
+                                          file_name  line  avg_per_time  hits  total_time       graph                                                                                                         code
+---------------------------------------------------  ----  ------------  ----  ----------  ----------  -----------------------------------------------------------------------------------------------------------
+/home/isucon/isucon7-practice/webapp/python/main.py     2         0.024    41           1                      db     = 'isubata',
+/home/isucon/isucon7-practice/webapp/python/main.py    32             0     0           0              def dbh():
+/home/isucon/isucon7-practice/webapp/python/main.py    33        69.667     6         418                  if hasattr(flask.g, 'db'):
+/home/isucon/isucon7-practice/webapp/python/main.py    34             0     0           0                      return flask.g.db
+/home/isucon/isucon7-practice/webapp/python/main.py    35             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py    36           1.5     6           9                  flask.g.db = MySQLdb.connect(
+/home/isucon/isucon7-practice/webapp/python/main.py    37         1.667     6          10                      host   = config['db_host'],
+/home/isucon/isucon7-practice/webapp/python/main.py    38         1.333     6           8                      port   = config['db_port'],
+/home/isucon/isucon7-practice/webapp/python/main.py    39           0.5     6           3                      user   = config['db_user'],
+/home/isucon/isucon7-practice/webapp/python/main.py    40           1.0     6           6                      passwd = config['db_password'],
+/home/isucon/isucon7-practice/webapp/python/main.py    41         0.667     6           4                      db     = 'isubata',
+/home/isucon/isucon7-practice/webapp/python/main.py    42         0.714     7           5                      charset= 'utf8mb4',
+/home/isucon/isucon7-practice/webapp/python/main.py    43         2.286     7          16                      cursorclass= MySQLdb.cursors.DictCursor,
+/home/isucon/isucon7-practice/webapp/python/main.py    44      4505.143     7       31536                      autocommit = True,
+/home/isucon/isucon7-practice/webapp/python/main.py    45             0     0           0                  )
+/home/isucon/isucon7-practice/webapp/python/main.py    46        98.857     7         692                  cur = flask.g.db.cursor()
+/home/isucon/isucon7-practice/webapp/python/main.py    47       422.714     7        2959                  cur.execute("SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'")
+/home/isucon/isucon7-practice/webapp/python/main.py    48        37.429     7         262                  return flask.g.db
+/home/isucon/isucon7-practice/webapp/python/main.py    51             0     0           0              @app.teardown_appcontext
+/home/isucon/isucon7-practice/webapp/python/main.py    52             0     0           0              def teardown(error):
+/home/isucon/isucon7-practice/webapp/python/main.py    53        37.143     7         260                  if hasattr(flask.g, "db"):
+/home/isucon/isucon7-practice/webapp/python/main.py    54       107.714     7         754                      flask.g.db.close()
+/home/isucon/isucon7-practice/webapp/python/main.py    69             0     0           0              def db_get_user(cur, user_id):
+/home/isucon/isucon7-practice/webapp/python/main.py    70         676.0     1         676                  cur.execute("SELECT * FROM user WHERE id = %s", (user_id,))
+/home/isucon/isucon7-practice/webapp/python/main.py    71          27.0     1          27                  return cur.fetchone()
+/home/isucon/isucon7-practice/webapp/python/main.py   119             0     0           0              def get_channel_list_info(focus_channel_id=None):
+/home/isucon/isucon7-practice/webapp/python/main.py   120          96.0     1          96                  cur = dbh().cursor()
+/home/isucon/isucon7-practice/webapp/python/main.py   121        1250.0     1        1250                  cur.execute("SELECT * FROM channel ORDER BY id")
+/home/isucon/isucon7-practice/webapp/python/main.py   122          17.0     1          17                  channels = cur.fetchall()
+/home/isucon/isucon7-practice/webapp/python/main.py   123             0     1           0                  description = ""
+/home/isucon/isucon7-practice/webapp/python/main.py   124             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   125         0.455    11           5                  for c in channels:
+/home/isucon/isucon7-practice/webapp/python/main.py   126         0.636    11           7                      if c['id'] == focus_channel_id:
+/home/isucon/isucon7-practice/webapp/python/main.py   127           1.0     1           1                          description = c['description']
+/home/isucon/isucon7-practice/webapp/python/main.py   128             0     1           0                          break
+/home/isucon/isucon7-practice/webapp/python/main.py   129             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   130             0     1           0                  return channels, description
+/home/isucon/isucon7-practice/webapp/python/main.py   193             0     0           0              @app.route('/message')
+/home/isucon/isucon7-practice/webapp/python/main.py   194             0     0           0              def get_message():
+/home/isucon/isucon7-practice/webapp/python/main.py   195          31.0     1          31                  user_id = flask.session.get('user_id')
+/home/isucon/isucon7-practice/webapp/python/main.py   196           1.0     1           1                  if not user_id:
+/home/isucon/isucon7-practice/webapp/python/main.py   197             0     0           0                      flask.abort(403)
+/home/isucon/isucon7-practice/webapp/python/main.py   198             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   199         399.0     1         399                  channel_id = int(flask.request.args.get('channel_id'))
+/home/isucon/isucon7-practice/webapp/python/main.py   200          61.0     1          61                  last_message_id = int(flask.request.args.get('last_message_id'))
+/home/isucon/isucon7-practice/webapp/python/main.py   201       13777.0     1       13777                  cur = dbh().cursor()
+/home/isucon/isucon7-practice/webapp/python/main.py   202             0     1           0                  cur.execute("SELECT * FROM message WHERE id > %s AND channel_id = %s ORDER BY id DESC LIMIT 100",
+/home/isucon/isucon7-practice/webapp/python/main.py   203        8280.0     1        8280                              (last_message_id, channel_id))
+/home/isucon/isucon7-practice/webapp/python/main.py   204          14.0     1          14                  rows = cur.fetchall()
+/home/isucon/isucon7-practice/webapp/python/main.py   205             0     1           0                  response = []
+/home/isucon/isucon7-practice/webapp/python/main.py   206           1.0     1           1                  for row in rows:
+/home/isucon/isucon7-practice/webapp/python/main.py   207             0     0           0                      r = {}
+/home/isucon/isucon7-practice/webapp/python/main.py   208             0     0           0                      r['id'] = row['id']
+/home/isucon/isucon7-practice/webapp/python/main.py   209             0     0           0                      cur.execute("SELECT name, display_name, avatar_icon FROM user WHERE id = %s", (row['user_id'],))
+/home/isucon/isucon7-practice/webapp/python/main.py   210             0     0           0                      r['user'] = cur.fetchone()
+/home/isucon/isucon7-practice/webapp/python/main.py   211             0     0           0                      r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
+/home/isucon/isucon7-practice/webapp/python/main.py   212             0     0           0                      r['content'] = row['content']
+/home/isucon/isucon7-practice/webapp/python/main.py   213             0     0           0                      response.append(r)
+/home/isucon/isucon7-practice/webapp/python/main.py   214           1.0     1           1                  response.reverse()
+/home/isucon/isucon7-practice/webapp/python/main.py   215             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   216             0     1           0                  max_message_id = max(r['id'] for r in rows) if rows else 0
+/home/isucon/isucon7-practice/webapp/python/main.py   217           1.0     1           1                  cur.execute('INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at)'
+/home/isucon/isucon7-practice/webapp/python/main.py   218             0     0           0                              ' VALUES (%s, %s, %s, NOW(), NOW())'
+/home/isucon/isucon7-practice/webapp/python/main.py   219             0     0           0                              ' ON DUPLICATE KEY UPDATE message_id = %s, updated_at = NOW()',
+/home/isucon/isucon7-practice/webapp/python/main.py   220         614.0     1         614                              (user_id, channel_id, max_message_id, max_message_id))
+/home/isucon/isucon7-practice/webapp/python/main.py   221             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   222        1228.0     1        1228                  return flask.jsonify(response)
+/home/isucon/isucon7-practice/webapp/python/main.py   225             0     0           0              @app.route('/fetch')
+/home/isucon/isucon7-practice/webapp/python/main.py   226             0     0           0              def fetch_unread():
+/home/isucon/isucon7-practice/webapp/python/main.py   227          42.2     5         211                  user_id = flask.session.get('user_id')
+/home/isucon/isucon7-practice/webapp/python/main.py   228           1.4     5           7                  if not user_id:
+/home/isucon/isucon7-practice/webapp/python/main.py   229             0     0           0                      flask.abort(403)
+/home/isucon/isucon7-practice/webapp/python/main.py   230             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   231     1001011.0     5     5005055  !*********      time.sleep(1.0)
+/home/isucon/isucon7-practice/webapp/python/main.py   232             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   233        3773.4     5       18867                  cur = dbh().cursor()
+/home/isucon/isucon7-practice/webapp/python/main.py   234         511.2     5        2556                  cur.execute('SELECT id FROM channel')
+/home/isucon/isucon7-practice/webapp/python/main.py   235          21.2     5         106                  rows = cur.fetchall()
+/home/isucon/isucon7-practice/webapp/python/main.py   236         2.492    65         162                  channel_ids = [row['id'] for row in rows]
+/home/isucon/isucon7-practice/webapp/python/main.py   237             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   238           1.2     5           6                  res = []
+/home/isucon/isucon7-practice/webapp/python/main.py   239         1.067    60          64                  for channel_id in channel_ids:
+/home/isucon/isucon7-practice/webapp/python/main.py   240         623.0    55       34265                      cur.execute('SELECT * FROM haveread WHERE user_id = %s AND channel_id = %s', (user_id, channel_id))
+/home/isucon/isucon7-practice/webapp/python/main.py   241        14.982    55         824                      row = cur.fetchone()
+/home/isucon/isucon7-practice/webapp/python/main.py   242           1.0    55          55                      if row:
+/home/isucon/isucon7-practice/webapp/python/main.py   243         0.978    45          44                          cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s AND %s < id',
+/home/isucon/isucon7-practice/webapp/python/main.py   244       979.733    45       44088                                      (channel_id, row['message_id']))
+/home/isucon/isucon7-practice/webapp/python/main.py   245             0     0           0                      else:
+/home/isucon/isucon7-practice/webapp/python/main.py   246        3720.2    10       37202                          cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s', (channel_id,))
+/home/isucon/isucon7-practice/webapp/python/main.py   247         1.691    55          93                      r = {}
+/home/isucon/isucon7-practice/webapp/python/main.py   248         1.073    55          59                      r['channel_id'] = channel_id
+/home/isucon/isucon7-practice/webapp/python/main.py   249        17.927    55         986                      r['unread'] = int(cur.fetchone()['cnt'])
+/home/isucon/isucon7-practice/webapp/python/main.py   250           2.0    55         110                      res.append(r)
+/home/isucon/isucon7-practice/webapp/python/main.py   251         944.8     5        4724                  return flask.jsonify(res)
+/home/isucon/isucon7-practice/webapp/python/main.py   252             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   253             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   254             0     0           0              .route('/history/<int:channel_id>')
+/home/isucon/isucon7-practice/webapp/python/main.py   255             0     0           0              in_required
+/home/isucon/isucon7-practice/webapp/python/main.py   256             0     0           0              get_history(channel_id):
+/home/isucon/isucon7-practice/webapp/python/main.py   257             0     0           0              page = flask.request.args.get('page')
+/home/isucon/isucon7-practice/webapp/python/main.py   258             0     0           0              if not page:
+/home/isucon/isucon7-practice/webapp/python/main.py   259             0     0           0                  page = '1'
+/home/isucon/isucon7-practice/webapp/python/main.py   260             0     0           0              if not page.isnumeric():
+/home/isucon/isucon7-practice/webapp/python/main.py   261             0     0           0                  flask.abort(400)
+/home/isucon/isucon7-practice/webapp/python/main.py   262             0     0           0              page = int(page)
+/home/isucon/isucon7-practice/webapp/python/main.py   263             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   264             0     0           0              N = 20
+/home/isucon/isucon7-practice/webapp/python/main.py   265             0     0           0              cur = dbh().cursor()
+/home/isucon/isucon7-practice/webapp/python/main.py   266             0     0           0              cur.execute("SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s", (channel_id,))
+/home/isucon/isucon7-practice/webapp/python/main.py   267             0     0           0              cnt = int(cur.fetchone()['cnt'])
+/home/isucon/isucon7-practice/webapp/python/main.py   268             0     0           0              max_page = math.ceil(cnt / N)
+/home/isucon/isucon7-practice/webapp/python/main.py   269             0     0           0              if not max_page:
+/home/isucon/isucon7-practice/webapp/python/main.py   270             0     0           0                  max_page = 1
+/home/isucon/isucon7-practice/webapp/python/main.py   271             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   272             0     0           0              if not 1 <= page <= max_page:
+/home/isucon/isucon7-practice/webapp/python/main.py   273             0     0           0                  flask.abort(400)
+/home/isucon/isucon7-practice/webapp/python/main.py   274             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   275             0     0           0              cur.execute("SELECT * FROM message WHERE channel_id = %s ORDER BY id DESC LIMIT %s OFFSET %s",
+/home/isucon/isucon7-practice/webapp/python/main.py   276             0     0           0                          (channel_id, N, (page - 1) * N))
+/home/isucon/isucon7-practice/webapp/python/main.py   277             0     0           0              rows = cur.fetchall()
+/home/isucon/isucon7-practice/webapp/python/main.py   278             0     0           0              messages = []
+/home/isucon/isucon7-practice/webapp/python/main.py   279             0     0           0              for row in rows:
+/home/isucon/isucon7-practice/webapp/python/main.py   280             0     0           0                  r = {}
+/home/isucon/isucon7-practice/webapp/python/main.py   281             0     0           0                  r['id'] = row['id']
+/home/isucon/isucon7-practice/webapp/python/main.py   282             0     0           0                  cur.execute("SELECT name, display_name, avatar_icon FROM user WHERE id = %s", (row['user_id'],))
+/home/isucon/isucon7-practice/webapp/python/main.py   283             0     0           0                  r['user'] = cur.fetchone()
+/home/isucon/isucon7-practice/webapp/python/main.py   284             0     0           0                  r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
+/home/isucon/isucon7-practice/webapp/python/main.py   285             0     0           0                  r['content'] = row['content']
+/home/isucon/isucon7-practice/webapp/python/main.py   286             0     0           0                  messages.append(r)
+/home/isucon/isucon7-practice/webapp/python/main.py   287             0     0           0              messages.reverse()
+/home/isucon/isucon7-practice/webapp/python/main.py   288             0     0           0
+/home/isucon/isucon7-practice/webapp/python/main.py   289             0     0           0              channels, description = get_channel_list_info(channel_id)
+/home/isucon/isucon7-practice/webapp/python/main.py   290             0     0           0              return flask.render_template('history.html',
+/home/isucon/isucon7-practice/webapp/python/main.py   291             0     0           0                                           channels=channels, channel_id=channel_id,
+/home/isucon/isucon7-practice/webapp/python/main.py   292             0     0           0                                           messages=messages, max_page=max_page, page=page)

@@ -1,0 +1,735 @@
+Time unit: 1e-06 [sec]
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: get_message
+Total time: 0.024408 [sec]
+  Line      Hits         Time  Code
+===================================
+   193                         @app.route('/message')
+   194                         def get_message():
+   195         1           31      user_id = flask.session.get('user_id')
+   196         1            1      if not user_id:
+   197                                 flask.abort(403)
+   198                         
+   199         1          399      channel_id = int(flask.request.args.get('channel_id'))
+   200         1           61      last_message_id = int(flask.request.args.get('last_message_id'))
+   201         1        13777      cur = dbh().cursor()
+   202         1            0      cur.execute("SELECT * FROM message WHERE id > %s AND channel_id = %s ORDER BY id DESC LIMIT 100",
+   203         1         8280                  (last_message_id, channel_id))
+   204         1           14      rows = cur.fetchall()
+   205         1            0      response = []
+   206         1            1      for row in rows:
+   207                                 r = {}
+   208                                 r['id'] = row['id']
+   209                                 cur.execute("SELECT name, display_name, avatar_icon FROM user WHERE id = %s", (row['user_id'],))
+   210                                 r['user'] = cur.fetchone()
+   211                                 r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
+   212                                 r['content'] = row['content']
+   213                                 response.append(r)
+   214         1            1      response.reverse()
+   215                         
+   216         1            0      max_message_id = max(r['id'] for r in rows) if rows else 0
+   217         1            1      cur.execute('INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at)'
+   218                                         ' VALUES (%s, %s, %s, NOW(), NOW())'
+   219                                         ' ON DUPLICATE KEY UPDATE message_id = %s, updated_at = NOW()',
+   220         1          614                  (user_id, channel_id, max_message_id, max_message_id))
+   221                         
+   222         1         1228      return flask.jsonify(response)
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: dbh
+Total time: 0.013714 [sec]
+  Line      Hits         Time  Code
+===================================
+    32                         def dbh():
+    33         1           53      if hasattr(flask.g, 'db'):
+    34                                 return flask.g.db
+    35                         
+    36         1            2      flask.g.db = MySQLdb.connect(
+    37         1            2          host   = config['db_host'],
+    38         1            1          port   = config['db_port'],
+    39         1            1          user   = config['db_user'],
+    40         1            1          passwd = config['db_password'],
+    41         1            1          db     = 'isubata',
+    42         1            1          charset= 'utf8mb4',
+    43         1            2          cursorclass= MySQLdb.cursors.DictCursor,
+    44         1        13213          autocommit = True,
+    45                             )
+    46         1           67      cur = flask.g.db.cursor()
+    47         1          346      cur.execute("SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'")
+    48         1           24      return flask.g.db
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: teardown
+Total time: 0.000143 [sec]
+  Line      Hits         Time  Code
+===================================
+    51                         @app.teardown_appcontext
+    52                         def teardown(error):
+    53         1           52      if hasattr(flask.g, "db"):
+    54         1           91          flask.g.db.close()
+
+Time unit: 1e-06 [sec]
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: fetch_unread
+Total time: 1.03325 [sec]
+  Line      Hits         Time  Code
+===================================
+   225                         @app.route('/fetch')
+   226                         def fetch_unread():
+   227         1           80      user_id = flask.session.get('user_id')
+   228         1            2      if not user_id:
+   229                                 flask.abort(403)
+   230                         
+   231         1      1001090      time.sleep(1.0)
+   232                         
+   233         1         5423      cur = dbh().cursor()
+   234         1          595      cur.execute('SELECT id FROM channel')
+   235         1           26      rows = cur.fetchall()
+   236         1           29      channel_ids = [row['id'] for row in rows]
+   237                         
+   238         1            2      res = []
+   239        12           17      for channel_id in channel_ids:
+   240        11         8233          cur.execute('SELECT * FROM haveread WHERE user_id = %s AND channel_id = %s', (user_id, channel_id))
+   241        11          221          row = cur.fetchone()
+   242        11           18          if row:
+   243         9           13              cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s AND %s < id',
+   244         9         8841                          (channel_id, row['message_id']))
+   245                                 else:
+   246         2         7117              cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s', (channel_id,))
+   247        11           26          r = {}
+   248        11           19          r['channel_id'] = channel_id
+   249        11          249          r['unread'] = int(cur.fetchone()['cnt'])
+   250        11           29          res.append(r)
+   251         1         1224      return flask.jsonify(res)
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: dbh
+Total time: 0.005271 [sec]
+  Line      Hits         Time  Code
+===================================
+    32                         def dbh():
+    33         1           96      if hasattr(flask.g, 'db'):
+    34                                 return flask.g.db
+    35                         
+    36         1            2      flask.g.db = MySQLdb.connect(
+    37         1            2          host   = config['db_host'],
+    38         1            2          port   = config['db_port'],
+    39         1            1          user   = config['db_user'],
+    40         1            1          passwd = config['db_password'],
+    41         1            1          db     = 'isubata',
+    42         1            1          charset= 'utf8mb4',
+    43         1            3          cursorclass= MySQLdb.cursors.DictCursor,
+    44         1         4504          autocommit = True,
+    45                             )
+    46         1           92      cur = flask.g.db.cursor()
+    47         1          517      cur.execute("SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'")
+    48         1           49      return flask.g.db
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: teardown
+Total time: 0.000147 [sec]
+  Line      Hits         Time  Code
+===================================
+    51                         @app.teardown_appcontext
+    52                         def teardown(error):
+    53         1           47      if hasattr(flask.g, "db"):
+    54         1          100          flask.g.db.close()
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: <listcomp>
+Total time: 1.1e-05 [sec]
+  Line      Hits         Time  Code
+===================================
+   236        12           11      channel_ids = [row['id'] for row in rows]
+   237                         
+   238                             res = []
+   239                             for channel_id in channel_ids:
+   240                                 cur.execute('SELECT * FROM haveread WHERE user_id = %s AND channel_id = %s', (user_id, channel_id))
+   241                                 row = cur.fetchone()
+   242                                 if row:
+   243                                     cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s AND %s < id',
+   244                                                 (channel_id, row['message_id']))
+   245                                 else:
+   246                                     cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s', (channel_id,))
+   247                                 r = {}
+   248                                 r['channel_id'] = channel_id
+   249                                 r['unread'] = int(cur.fetchone()['cnt'])
+   250                                 res.append(r)
+   251                             return flask.jsonify(res)
+   252                         
+   253                         
+   254                         @app.route('/history/<int:channel_id>')
+   255                         @login_required
+   256                         def get_history(channel_id):
+   257                             page = flask.request.args.get('page')
+   258                             if not page:
+   259                                 page = '1'
+   260                             if not page.isnumeric():
+   261                                 flask.abort(400)
+   262                             page = int(page)
+   263                         
+   264                             N = 20
+   265                             cur = dbh().cursor()
+   266                             cur.execute("SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s", (channel_id,))
+   267                             cnt = int(cur.fetchone()['cnt'])
+   268                             max_page = math.ceil(cnt / N)
+   269                             if not max_page:
+   270                                 max_page = 1
+   271                         
+   272                             if not 1 <= page <= max_page:
+   273                                 flask.abort(400)
+   274                         
+   275                             cur.execute("SELECT * FROM message WHERE channel_id = %s ORDER BY id DESC LIMIT %s OFFSET %s",
+   276                                         (channel_id, N, (page - 1) * N))
+   277                             rows = cur.fetchall()
+   278                             messages = []
+   279                             for row in rows:
+   280                                 r = {}
+   281                                 r['id'] = row['id']
+   282                                 cur.execute("SELECT name, display_name, avatar_icon FROM user WHERE id = %s", (row['user_id'],))
+   283                                 r['user'] = cur.fetchone()
+   284                                 r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
+   285                                 r['content'] = row['content']
+   286                                 messages.append(r)
+   287                             messages.reverse()
+   288                         
+   289                             channels, description = get_channel_list_info(channel_id)
+   290                             return flask.render_template('history.html',
+   291                                                          channels=channels, channel_id=channel_id,
+   292                                                          messages=messages, max_page=max_page, page=page)
+
+Time unit: 1e-06 [sec]
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: fetch_unread
+Total time: 1.03571 [sec]
+  Line      Hits         Time  Code
+===================================
+   225                         @app.route('/fetch')
+   226                         def fetch_unread():
+   227         1           53      user_id = flask.session.get('user_id')
+   228         1            2      if not user_id:
+   229                                 flask.abort(403)
+   230                         
+   231         1      1001120      time.sleep(1.0)
+   232                         
+   233         1         4975      cur = dbh().cursor()
+   234         1          702      cur.execute('SELECT id FROM channel')
+   235         1           24      rows = cur.fetchall()
+   236         1           26      channel_ids = [row['id'] for row in rows]
+   237                         
+   238         1            1      res = []
+   239        12           14      for channel_id in channel_ids:
+   240        11         8019          cur.execute('SELECT * FROM haveread WHERE user_id = %s AND channel_id = %s', (user_id, channel_id))
+   241        11          187          row = cur.fetchone()
+   242        11           11          if row:
+   243         9           12              cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s AND %s < id',
+   244         9         9600                          (channel_id, row['message_id']))
+   245                                 else:
+   246         2         9496              cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s', (channel_id,))
+   247        11           25          r = {}
+   248        11           13          r['channel_id'] = channel_id
+   249        11          233          r['unread'] = int(cur.fetchone()['cnt'])
+   250        11           28          res.append(r)
+   251         1         1169      return flask.jsonify(res)
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: dbh
+Total time: 0.004886 [sec]
+  Line      Hits         Time  Code
+===================================
+    32                         def dbh():
+    33         1           96      if hasattr(flask.g, 'db'):
+    34                                 return flask.g.db
+    35                         
+    36         1            2      flask.g.db = MySQLdb.connect(
+    37         1            2          host   = config['db_host'],
+    38         1            2          port   = config['db_port'],
+    39         1            1          user   = config['db_user'],
+    40         1            1          passwd = config['db_password'],
+    41         1            1          db     = 'isubata',
+    42         1            1          charset= 'utf8mb4',
+    43         1            2          cursorclass= MySQLdb.cursors.DictCursor,
+    44         1         4126          autocommit = True,
+    45                             )
+    46         1           84      cur = flask.g.db.cursor()
+    47         1          520      cur.execute("SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'")
+    48         1           48      return flask.g.db
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: teardown
+Total time: 0.000147 [sec]
+  Line      Hits         Time  Code
+===================================
+    51                         @app.teardown_appcontext
+    52                         def teardown(error):
+    53         1           48      if hasattr(flask.g, "db"):
+    54         1           99          flask.g.db.close()
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: <listcomp>
+Total time: 1.3e-05 [sec]
+  Line      Hits         Time  Code
+===================================
+   236        12           13      channel_ids = [row['id'] for row in rows]
+   237                         
+   238                             res = []
+   239                             for channel_id in channel_ids:
+   240                                 cur.execute('SELECT * FROM haveread WHERE user_id = %s AND channel_id = %s', (user_id, channel_id))
+   241                                 row = cur.fetchone()
+   242                                 if row:
+   243                                     cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s AND %s < id',
+   244                                                 (channel_id, row['message_id']))
+   245                                 else:
+   246                                     cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s', (channel_id,))
+   247                                 r = {}
+   248                                 r['channel_id'] = channel_id
+   249                                 r['unread'] = int(cur.fetchone()['cnt'])
+   250                                 res.append(r)
+   251                             retu   259                                 page = '1'
+   2    41         1            1          db     = 'isubata',
+    42         1            1          charset= 'utf8mb4',
+    43         1            2          cursorclass= MySQLdb.cursors.DictCursor,
+    44         1         3249          autocommit = True,
+    45                             )
+    46         1           70      cur = flask.g.db.cursor()
+    47         1          518      cur.execute("SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'")
+    48         1           41      return flask.g.db
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: get_channel_list_info
+Total time: 0.001376 [sec]
+  Line      Hits         Time  Code
+===================================
+   119                         def get_channel_list_info(focus_channel_id=None):
+   120         1           96      cur = dbh().cursor()
+   121         1         1250      cur.execute("SELECT * FROM channel ORDER BY id")
+   122         1           17      channels = cur.fetchall()
+   123         1            0      description = ""
+   124                         
+   125        11            5      for c in channels:
+   126        11            7          if c['id'] == focus_channel_id:
+   127         1            1              description = c['description']
+   128         1            0              break
+   129                         
+   130         1            0      return channels, description
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: db_get_user
+Total time: 0.000703 [sec]
+  Line      Hits         Time  Code
+===================================
+    69                         def db_get_user(cur, user_id):
+    70         1          676      cur.execute("SELECT * FROM user WHERE id = %s", (user_id,))
+    71         1           27      return cur.fetchone()
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: teardown
+Total time: 0.000241 [sec]
+  Line      Hits         Time  Code
+===================================
+    51                         @app.teardown_appcontext
+    52                         def teardown(error):
+    53         1           29      if hasattr(flask.g, "db"):
+    54         1          212          flask.g.db.close()
+
+                         channels, description = get_channel_list_info(channel_id)
+   290                             return flask.render_template('history.html',
+   291                                                          channels=channels, channel_id=channel_id,
+   292                                                          messages=messages, max_page=max_page, page=page)
+
+Time unit: 1e-06 [sec]
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: fetch_unread
+Total time: 1.02775 [sec]
+  Line      Hits         Time  Code
+===================================
+   225                         @app.route('/fetch')
+   226                         def fetch_unread():
+   227         1           25      user_id = flask.session.get('user_id')
+   228         1            1      if not user_id:
+   229                                 flask.abort(403)
+   230                         
+   231         1      1001060      time.sleep(1.0)
+   232                         
+   233         1         3242      cur = dbh().cursor()
+   234         1          474      cur.execute('SELECT id FROM channel')
+   235         1           30      rows = cur.fetchall()
+   236         1           26      channel_ids = [row['id'] for row in rows]
+   237                         
+   238         1            1      res = []
+   239        12           10      for channel_id in channel_ids:
+   240        11         5458          cur.execute('SELECT * FROM haveread WHERE user_id = %s AND channel_id = %s', (user_id, channel_id))
+   241        11          106          row = cur.fetchone()
+   242        11            7          if row:
+   243         9            5              cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s AND %s < id',
+   244         9         9097                          (channel_id, row['message_id']))
+   245                                 else:
+   246         2         7356              cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s', (channel_id,))
+   247        11           12          r = {}
+   248        11            6          r['channel_id'] = channel_id
+   249        11          142          r['unread'] = int(cur.fetchone()['cnt'])
+   250        11           15          res.append(r)
+   251         1          681      return flask.jsonify(res)
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: dbh
+Total time: 0.003181 [sec]
+  Line      Hits         Time  Code
+===================================
+    32                         def dbh():
+    33         1           59      if hasattr(flask.g, 'db'):
+    34                                 return flask.g.db
+    35                         
+    36         1            1      flask.g.db = MySQLdb.connect(
+    37         1            2          host   = config['db_host'],
+    38         1            1          port   = config['db_port'],
+    39         1            0          user   = config['db_user'],
+    40         1            1          passwd = config['db_password'],
+    41         1            1          db     = 'isubata',
+    42         1            0          charset= 'utf8mb4',
+    43         1            2          cursorclass= MySQLdb.cursors.DictCursor,
+    44         1         2448          autocommit = True,
+    45                             )
+    46         1          287      cur = flask.g.db.cursor()
+    47         1          332      cur.execute("SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'")
+    48         1           47      return flask.g.db
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: teardown
+Total time: 7.4e-05 [sec]
+  Line      Hits         Time  Code
+===================================
+    51                         @app.teardown_appcontext
+    52                         def teardown(error):
+    53         1           24      if hasattr(flask.g, "db"):
+    54         1           50          flask.g.db.close()
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: <listcomp>
+Total time: 1.9e-05 [sec]
+  Line      Hits         Time  Code
+===================================
+   236        12           19      channel_ids = [row['id'] for row in rows]
+   237                         
+   238                             res = []
+   239                             for channel_id in channel_ids:
+   240                                 cur.execute('SELECT * FROM haveread WHERE user_id = %s AND channel_id = %s', (user_id, channel_id))
+   241                                 row = cur.fetchone()
+   242                                 if row:
+   243                                     cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s AND %s < id',
+   244                                                 (channel_id, row['message_id']))
+   245                                 else:
+   246                                     cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s', (channel_id,))
+   247                                 r = {}
+   248                                 r['channel_id'] = channel_id
+   249                                 r['unread'] = int(cur.fetchone()['cnt'])
+   250                                 res.append(r)
+   251                             return flask.jsonify(res)
+   252                         
+   253                         
+   254                         @app.route('/history/<int:channel_id>')
+   255                         @login_required
+   256                         def get_history(channel_id):
+   257                             page = flask.request.args.get('page')
+   258                             if not page:
+   259                                 page = '1'
+   260                             if not page.isnumeric():
+   261                                 flask.abort(400)
+   262                             page = int(page)
+   263                         
+   264                             N = 20
+   265                             cur = dbh().cursor()
+   266                             cur.execute("SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s", (channel_id,))
+   267                             cnt = int(cur.fetchone()['cnt'])
+   268                             max_page = math.ceil(cnt / N)
+   269                             if not max_page:
+   270                                 max_page = 1
+   271                         
+   272                             if not 1 <= page <= max_page:
+   273                                 flask.abort(400)
+   274                         
+   275                             cur.execute("SELECT * FROM message WHERE channel_id = %s ORDER BY id DESC LIMIT %s OFFSET %s",
+   276                                         (channel_id, N, (page - 1) * N))
+   277                             rows = cur.fetchall()
+   278                             messages = []
+   279                             for row in rows:
+   280                                 r = {}
+   281                                 r['id'] = row['id']
+   282                                 cur.execute("SELECT name, display_name, avatar_icon FROM user WHERE id = %s", (row['user_id'],))
+   283                                 r['user'] = cur.fetchone()
+   284                                 r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
+   285                                 r['content'] = row['content']
+   286                                 messages.append(r)
+   287                             messages.reverse()
+   288                         
+   289                             channels, description = get_channel_list_info(channel_id)
+   290                             return flask.render_template('history.html',
+   291                                                          channels=channels, channel_id=channel_id,
+   292                                                          messages=messages, max_page=max_page, page=page)
+
+Time unit: 1e-06 [sec]
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: fetch_unread
+Total time: 1.03251 [sec]
+  Line      Hits         Time  Code
+===================================
+   225                         @app.route('/fetch')
+   226                         def fetch_unread():
+   227         1           27      user_id = flask.session.get('user_id')
+   228         1            1      if not user_id:
+   229                                 flask.abort(403)
+   230                         
+   231         1      1000708      time.sleep(1.0)
+   232                         
+   233         1         2589      cur = dbh().cursor()
+   234         1          412      cur.execute('SELECT id FROM channel')
+   235         1           12      rows = cur.fetchall()
+   236         1           13      channel_ids = [row['id'] for row in rows]
+   237                         
+   238         1            1      res = []
+   239        12           13      for channel_id in channel_ids:
+   240        11         8532          cur.execute('SELECT * FROM haveread WHERE user_id = %s AND channel_id = %s', (user_id, channel_id))
+   241        11          208          row = cur.fetchone()
+   242        11           13          if row:
+   243         9            9              cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s AND %s < id',
+   244         9        10877                          (channel_id, row['message_id']))
+   245                                 else:
+   246         2         7723              cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s', (channel_id,))
+   247        11           19          r = {}
+   248        11           16          r['channel_id'] = channel_id
+   249        11          252          r['unread'] = int(cur.fetchone()['cnt'])
+   250        11           24          res.append(r)
+   251         1         1062      return flask.jsonify(res)
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: dbh
+Total time: 0.002407 [sec]
+  Line      Hits         Time  Code
+===================================
+    32                         def dbh():
+    33         1           49      if hasattr(flask.g, 'db'):
+    34                                 return flask.g.db
+    35                         
+    36         1            1      flask.g.db = MySQLdb.connect(
+    37         1            1          host   = config['db_host'],
+    38         1            1          port   = config['db_port'],
+    39         1            0          user   = config['db_user'],
+    40         1            1          passwd = config['db_password'],
+    41         1            0          db     = 'isubata',
+    42         1            1          charset= 'utf8mb4',
+    43         1            2          cursorclass= MySQLdb.cursors.DictCursor,
+    44         1         1987          autocommit = True,
+    45                             )
+    46         1           46      cur = flask.g.db.cursor()
+    47         1          295      cur.execute("SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'")
+    48         1           23      return flask.g.db
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: teardown
+Total time: 0.000106 [sec]
+  Line      Hits         Time  Code
+===================================
+    51                         @app.teardown_appcontext
+    52                         def teardown(error):
+    53         1           39      if hasattr(flask.g, "db"):
+    54         1           67          flask.g.db.close()
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: <listcomp>
+Total time: 6e-06 [sec]
+  Line      Hits         Time  Code
+===================================
+   236        12            6      channel_ids = [row['id'] for row in rows]
+   237                         
+   238                             res = []
+   239                             for channel_id in channel_ids:
+   240                                 cur.execute('SELECT * FROM haveread WHERE user_id = %s AND channel_id = %s', (user_id, channel_id))
+   241                                 row = cur.fetchone()
+   242                                 if row:
+   243                                     cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s AND %s < id',
+   244                                                 (channel_id, row['message_id']))
+   245                                 else:
+   246                                     cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s', (channel_id,))
+   247                                 r = {}
+   248                                 r['channel_id'] = channel_id
+   249                                 r['unread'] = int(cur.fetchone()['cnt'])
+   250                                 res.append(r)
+   251                             return flask.jsonify(res)
+   252                         
+   253                         
+   254                         @app.route('/history/<int:channel_id>')
+   255                         @login_required
+   256                         def get_history(channel_id):
+   257                             page = flask.request.args.get('page')
+   258                             if not page:
+   259                                 page = '1'
+   260                             if not page.isnumeric():
+   261                                 flask.abort(400)
+   262                             page = int(page)
+   263                         
+   264                             N = 20
+   265                             cur = dbh().cursor()
+   266                             cur.execute("SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s", (channel_id,))
+   267                             cnt = int(cur.fetchone()['cnt'])
+   268                             max_page = math.ceil(cnt / N)
+   269                             if not max_page:
+   270                                 max_page = 1
+   271                         
+   272                             if not 1 <= page <= max_page:
+   273                                 flask.abort(400)
+   274                         
+   275                             cur.execute("SELECT * FROM message WHERE channel_id = %s ORDER BY id DESC LIMIT %s OFFSET %s",
+   276                                         (channel_id, N, (page - 1) * N))
+   277                             rows = cur.fetchall()
+   278                             messages = []
+   279                             for row in rows:
+   280                                 r = {}
+   281                                 r['id'] = row['id']
+   282                                 cur.execute("SELECT name, display_name, avatar_icon FROM user WHERE id = %s", (row['user_id'],))
+   283                                 r['user'] = cur.fetchone()
+   284                                 r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
+   285                                 r['content'] = row['content']
+   286                                 messages.append(r)
+   287                             messages.reverse()
+   288                         
+   289                             channels, description = get_channel_list_info(channel_id)
+   290                             return flask.render_template('history.html',
+   291                                                          channels=channels, channel_id=channel_id,
+   292                                                          messages=messages, max_page=max_page, page=page)
+
+Time unit: 1e-06 [sec]
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: fetch_unread
+Total time: 1.0202 [sec]
+  Line      Hits         Time  Code
+===================================
+   225                         @app.route('/fetch')
+   226                         def fetch_unread():
+   227         1           26      user_id = flask.session.get('user_id')
+   228         1            1      if not user_id:
+   229                                 flask.abort(403)
+   230                         
+   231         1      1001077      time.sleep(1.0)
+   232                         
+   233         1         2638      cur = dbh().cursor()
+   234         1          373      cur.execute('SELECT id FROM channel')
+   235         1           14      rows = cur.fetchall()
+   236         1           13      channel_ids = [row['id'] for row in rows]
+   237                         
+   238         1            1      res = []
+   239        12           10      for channel_id in channel_ids:
+   240        11         4023          cur.execute('SELECT * FROM haveread WHERE user_id = %s AND channel_id = %s', (user_id, channel_id))
+   241        11          102          row = cur.fetchone()
+   242        11            6          if row:
+   243         9            5              cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s AND %s < id',
+   244         9         5673                          (channel_id, row['message_id']))
+   245                                 else:
+   246         2         5510              cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s', (channel_id,))
+   247        11           11          r = {}
+   248        11            5          r['channel_id'] = channel_id
+   249        11          110          r['unread'] = int(cur.fetchone()['cnt'])
+   250        11           14          res.append(r)
+   251         1          588      return flask.jsonify(res)
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: dbh
+Total time: 0.002588 [sec]
+  Line      Hits         Time  Code
+===================================
+    32                         def dbh():
+    33         1           65      if hasattr(flask.g, 'db'):
+    34                                 return flask.g.db
+    35                         
+    36         1            1      flask.g.db = MySQLdb.connect(
+    37         1            1          host   = config['db_host'],
+    38         1            1          port   = config['db_port'],
+    39         1            0          user   = config['db_user'],
+    40         1            1          passwd = config['db_password'],
+    41         1            0          db     = 'isubata',
+    42         1            0          charset= 'utf8mb4',
+    43         1            3          cursorclass= MySQLdb.cursors.DictCursor,
+    44         1         2009          autocommit = True,
+    45                             )
+    46         1           46      cur = flask.g.db.cursor()
+    47         1          431      cur.execute("SET SESSION sql_mode='TRADITIONAL,NO_AUTO_VALUE_ON_ZERO,ONLY_FULL_GROUP_BY'")
+    48         1           30      return flask.g.db
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: teardown
+Total time: 0.000156 [sec]
+  Line      Hits         Time  Code
+===================================
+    51                         @app.teardown_appcontext
+    52                         def teardown(error):
+    53         1           21      if hasattr(flask.g, "db"):
+    54         1          135          flask.g.db.close()
+
+File: /home/isucon/isucon7-practice/webapp/python/main.py
+Name: <listcomp>
+Total time: 6e-06 [sec]
+  Line      Hits         Time  Code
+===================================
+   236        12            6      channel_ids = [row['id'] for row in rows]
+   237                         
+   238                             res = []
+   239                             for channel_id in channel_ids:
+   240                                 cur.execute('SELECT * FROM haveread WHERE user_id = %s AND channel_id = %s', (user_id, channel_id))
+   241                                 row = cur.fetchone()
+   242                                 if row:
+   243                                     cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s AND %s < id',
+   244                                                 (channel_id, row['message_id']))
+   245                                 else:
+   246                                     cur.execute('SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s', (channel_id,))
+   247                                 r = {}
+   248                                 r['channel_id'] = channel_id
+   249                                 r['unread'] = int(cur.fetchone()['cnt'])
+   250                                 res.append(r)
+   251                             return flask.jsonify(res)
+   252                         
+   253                         
+   254                         @app.route('/history/<int:channel_id>')
+   255                         @login_required
+   256                         def get_history(channel_id):
+   257                             page = flask.request.args.get('page')
+   258                             if not page:
+   259                                 page = '1'
+   260                             if not page.isnumeric():
+   261                                 flask.abort(400)
+   262                             page = int(page)
+   263                         
+   264                             N = 20
+   265                             cur = dbh().cursor()
+   266                             cur.execute("SELECT COUNT(*) as cnt FROM message WHERE channel_id = %s", (channel_id,))
+   267                             cnt = int(cur.fetchone()['cnt'])
+   268                             max_page = math.ceil(cnt / N)
+   269                             if not max_page:
+   270                                 max_page = 1
+   271                         
+   272                             if not 1 <= page <= max_page:
+   273                                 flask.abort(400)
+   274                         
+   275                             cur.execute("SELECT * FROM message WHERE channel_id = %s ORDER BY id DESC LIMIT %s OFFSET %s",
+   276                                         (channel_id, N, (page - 1) * N))
+   277                             rows = cur.fetchall()
+   278                             messages = []
+   279                             for row in rows:
+   280                                 r = {}
+   281                                 r['id'] = row['id']
+   282                                 cur.execute("SELECT name, display_name, avatar_icon FROM user WHERE id = %s", (row['user_id'],))
+   283                                 r['user'] = cur.fetchone()
+   284                                 r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
+   285                                 r['content'] = row['content']
+   286                                 messages.append(r)
+   287                             messages.reverse()
+   288                         
+   289                             channels, description = get_channel_list_info(channel_id)
+   290                             return flask.render_template('history.html',
+   291                                                          channels=channels, channel_id=channel_id,
+   292                                                          messages=messages, max_page=max_page, page=page)
+
