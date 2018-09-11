@@ -1,6 +1,7 @@
 require 'digest/sha1'
 require 'mysql2'
 require 'sinatra/base'
+require 'securerandom'
 
 class App < Sinatra::Base
   configure do
@@ -314,7 +315,7 @@ class App < Sinatra::Base
         end
 
         data = file[:tempfile].read
-        digest = Digest::SHA1.hexdigest(data)
+        digest = SecureRandom.hex(40)
 
         avatar_name = digest + ext
         avatar_data = data
