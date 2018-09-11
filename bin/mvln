@@ -5,4 +5,4 @@ LOGFILE=`dirname $0`"/../mvln.log"
 
 mv -n $1 $2
 ln -s $2 $1
-echo "\"$1\" \"$2\"" >> $LOGFILE
+echo `readlink -f $1` "@" `readlink -f $2` >> $LOGFILE
