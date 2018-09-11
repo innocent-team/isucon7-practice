@@ -26,7 +26,6 @@ slack.ping "Starting benchmark #{result_file}"
 puts `#{cmd}`
 raise "Failed... " unless $?.exitstatus == 0
 
-result_file="/home/isucon/isucon7-practice/bin/../bench_results/2018-09-11T15:51:18"
 result = JSON.load(File.open(result_file))
 
 score = result["score"]
