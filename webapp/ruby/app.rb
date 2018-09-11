@@ -206,21 +206,27 @@ class App < Sinatra::Base
     @page = @page.to_i
 
     n = 20
-    statement = db.prepare('SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?')
+    statement = db.prepare(%|
+    SELECT m.*, u.name, u.display_name, u.avatar_icon
+    FROM message m
+    INNER JOIN user u
+    ON m.user_id = u.id
+    WHERE m.channel_id = ?
+    ORDER BY m.id DESC
+    LIMIT ? OFFSET ?
+    |)
     rows = statement.execute(@channel_id, n, (@page - 1) * n).to_a
     statement.close
-    @messages = []
-    # N+1
-    rows.each do |row|
-      r = {}
-      r['id'] = row['id']
-      statement = db.prepare('SELECT name, display_name, avatar_icon FROM user WHERE id = ?')
-      r['user'] = statement.execute(row['user_id']).first
-      r['date'] = row['created_at'].strftime("%Y/%m/%d %H:%M:%S")
-      r['content'] = row['content']
-      @messages << r
-      statement.close
-    end
+    @messages = rows.map {|r| {
+        'id' => r['id'],
+        'user' => {
+            'name' => r['name'],
+            'display_name' => r['display_name'],
+            'avatar_icon' => r['avatar_icon']
+        },
+        'date' => r['created_at'].strftime("%Y/%m/%d %H:%M:%S"),
+        'content' => r['content']
+    }}
     @messages.reverse!
 
     # indexed
